@@ -46,7 +46,8 @@ func day2() {
 	input := readFile("day2.txt")
 	lines := strings.Split(input, "\n")
 
-	score := 0
+	scorePartOne := 0
+	scorePartTwo := 0
 
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" {
@@ -54,21 +55,41 @@ func day2() {
 		}
 
 		columns := strings.Split(line, " ")
+
+		// Part 1
 		opponentMove, err := parseColumnOne(columns[0])
 		if err != nil {
 			log.Fatal(err)
 		}
-		myMove, err := parseColumnTwo(columns[1])
+		myMove, err := parseColumnTwoToMove(columns[1])
 		if err != nil {
 			log.Fatal(err)
 		}
-		score += shapeScore(myMove)
-		score += roundScore(opponentMove, myMove)
+		scorePartOne += shapeScore(myMove)
+		scorePartOne += roundScore(opponentMove, myMove)
+
+		// Part Two
+		expectedOutcome, err := parseColumnTwoToOutcome(columns[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		myShape := shapeForOutcome(expectedOutcome, opponentMove)
+		scorePartTwo += shapeScore(myShape)
+		scorePartTwo += roundScore(opponentMove, myShape)
 	}
 
 	log.Println("Day 2")
-	log.Printf("First: %d\n", score)
+	log.Printf("First: %d\n", scorePartOne)
+	log.Printf("Second: %d\n", scorePartTwo)
 }
+
+type outcome int
+
+const (
+	lose outcome = iota
+	draw
+	win
+)
 
 type shape int
 
@@ -111,6 +132,36 @@ func shapeScore(s shape) int {
 	}
 }
 
+func shapeForOutcome(expectedOutcome outcome, opponentMove shape) shape {
+	if expectedOutcome == draw {
+		return opponentMove
+	}
+
+	if expectedOutcome == win {
+		switch opponentMove {
+		case rock:
+			return paper
+		case paper:
+			return scissors
+		case scissors:
+			return rock
+		default:
+			panic("Unknown move")
+		}
+	}
+
+	switch opponentMove {
+	case rock:
+		return scissors
+	case paper:
+		return rock
+	case scissors:
+		return paper
+	default:
+		panic("Unknown move")
+	}
+}
+
 func parseColumnOne(c string) (shape, error) {
 	switch c {
 	case "A":
@@ -124,7 +175,7 @@ func parseColumnOne(c string) (shape, error) {
 	return rock, errors.New("Cannot parse move")
 }
 
-func parseColumnTwo(c string) (shape, error) {
+func parseColumnTwoToMove(c string) (shape, error) {
 	switch c {
 	case "X":
 		return rock, nil
@@ -135,6 +186,19 @@ func parseColumnTwo(c string) (shape, error) {
 	}
 
 	return rock, errors.New("Cannot parse move")
+}
+
+func parseColumnTwoToOutcome(c string) (outcome, error) {
+	switch c {
+	case "X":
+		return lose, nil
+	case "Y":
+		return draw, nil
+	case "Z":
+		return win, nil
+	}
+
+	return lose, errors.New("Cannot parse outcome")
 }
 
 func readFile(filepath string) string {
