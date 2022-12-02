@@ -3,11 +3,11 @@ package days
 import (
 	"adventofcode2022/util"
 	"errors"
-	"log"
+	"fmt"
 	"strings"
 )
 
-func Day2() {
+func day2(inputFilePath string) (string, string, error) {
 	input := util.ReadFile("day2.txt")
 	lines := strings.Split(input, "\n")
 
@@ -24,11 +24,11 @@ func Day2() {
 		// Part 1
 		opponentMove, err := parseColumnOne(columns[0])
 		if err != nil {
-			log.Fatal(err)
+			return "", "", err
 		}
 		myMove, err := parseColumnTwoToMove(columns[1])
 		if err != nil {
-			log.Fatal(err)
+			return "", "", err
 		}
 		scorePartOne += shapeScore(myMove)
 		scorePartOne += roundScore(opponentMove, myMove)
@@ -36,16 +36,14 @@ func Day2() {
 		// Part Two
 		expectedOutcome, err := parseColumnTwoToOutcome(columns[1])
 		if err != nil {
-			log.Fatal(err)
+			return "", "", err
 		}
 		myShape := shapeForOutcome(expectedOutcome, opponentMove)
 		scorePartTwo += shapeScore(myShape)
 		scorePartTwo += roundScore(opponentMove, myShape)
 	}
 
-	log.Println("Day 2")
-	log.Printf("First: %d\n", scorePartOne)
-	log.Printf("Second: %d\n", scorePartTwo)
+	return fmt.Sprint(scorePartOne), fmt.Sprint(scorePartTwo), nil
 }
 
 type outcome int
@@ -137,7 +135,7 @@ func parseColumnOne(c string) (shape, error) {
 		return scissors, nil
 	}
 
-	return rock, errors.New("Cannot parse move")
+	return rock, errors.New("cannot parse move")
 }
 
 func parseColumnTwoToMove(c string) (shape, error) {
@@ -150,7 +148,7 @@ func parseColumnTwoToMove(c string) (shape, error) {
 		return scissors, nil
 	}
 
-	return rock, errors.New("Cannot parse move")
+	return rock, errors.New("cannot parse move")
 }
 
 func parseColumnTwoToOutcome(c string) (outcome, error) {
@@ -163,5 +161,5 @@ func parseColumnTwoToOutcome(c string) (outcome, error) {
 		return win, nil
 	}
 
-	return lose, errors.New("Cannot parse outcome")
+	return lose, errors.New("cannot parse outcome")
 }

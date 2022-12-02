@@ -2,14 +2,14 @@ package days
 
 import (
 	"adventofcode2022/util"
-	"log"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 )
 
-func Day1() {
-	input := util.ReadFile("day1.txt")
+func day1(inputFilePath string) (string, string, error) {
+	input := util.ReadFile(inputFilePath)
 	lines := strings.Split(input, "\n")
 
 	caloriesPerElf := []int{}
@@ -22,7 +22,7 @@ func Day1() {
 		} else {
 			number, err := strconv.Atoi(line)
 			if err != nil {
-				log.Fatal(err)
+				return "", "", err
 			}
 			current += number
 		}
@@ -30,7 +30,9 @@ func Day1() {
 
 	sort.Slice(caloriesPerElf, func(i, j int) bool { return caloriesPerElf[i] > caloriesPerElf[j] })
 	topThree := caloriesPerElf[0:3]
-	log.Println("Day 1")
-	log.Printf("First: %d\n", topThree[0])
-	log.Printf("Second: %d\n", util.Sum(topThree))
+
+	firstPart := fmt.Sprint(topThree[0])
+	secondPart := fmt.Sprint(util.Sum(topThree))
+
+	return firstPart, secondPart, nil
 }
