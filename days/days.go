@@ -14,4 +14,5 @@ type dayFunc func(string) (string, string, error)
 var dayRegistry []dayFunc = []dayFunc{
 	day1,
 	day2,
+	day3,
 }
