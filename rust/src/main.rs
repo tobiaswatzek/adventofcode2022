@@ -1,12 +1,12 @@
-use std::{env, error, fs, path::{PathBuf}};
+use std::{env, error, path::PathBuf};
+mod days;
 
 fn main() {
-
     let args = parse_args().expect("arguments are expected");
 
-    let (part_one, part_two) = day1(&args.file_path());
+    let (part_one, part_two) = days::solve_day(&args.day, &args.file_path());
 
-    println!("Day 1:\n\tPart one: {part_one}\n\tPart two: {part_two}");
+    println!("Day {}:\n\tPart one: {part_one}\n\tPart two: {part_two}", args.day);
 }
 
 #[derive(Debug)]
@@ -35,24 +35,4 @@ fn parse_args() -> Result<Arguments, Box<dyn error::Error>> {
     };
 
     Ok(Arguments { data_dir, day })
-}
-
-fn day1(input_path: &PathBuf) -> (String, String) {
-    let input = fs::read_to_string(input_path).expect("Should have been able to read the file");
-
-    let mut calories_per_elf = input
-        .split("\n\n")
-        .map(|group| {
-            group
-                .lines()
-                .map(|l| l.parse::<i32>().unwrap())
-                .sum::<i32>()
-        })
-        .collect::<Vec<i32>>();
-    calories_per_elf.sort_unstable();
-
-    let max_calories = calories_per_elf.last().expect("There has to be an element");
-    let sum_max_three: i32 = calories_per_elf.iter().rev().take(3).sum();
-
-    (max_calories.to_string(), sum_max_three.to_string())
 }
