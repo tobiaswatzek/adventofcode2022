@@ -15,4 +15,5 @@ var dayRegistry []dayFunc = []dayFunc{
 	day1,
 	day2,
 	day3,
+	day4,
 }
