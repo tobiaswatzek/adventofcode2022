@@ -1,4 +1,9 @@
-use std::{cell::RefCell, fs, path::PathBuf, rc::Rc};
+use std::{
+    cell::{Ref, RefCell},
+    fmt, fs,
+    path::PathBuf,
+    rc::Rc,
+};
 
 #[derive(Debug)]
 enum ChangeDirectoryParameter {
@@ -42,11 +47,26 @@ pub fn solve(input_path: &PathBuf) -> (String, String) {
         }
     }
 
-    let total = file_system.get_root().borrow().get_size();
+    let dirs = file_system.root.borrow().all_dir_sizes();
 
-    println!("{total:?}");
+    let part_one: usize = dirs.iter().filter(|&&s| s <= 100_000).sum();
 
-    (String::new(), String::new())
+    let space_needed: usize = 30_000_000;
+    let part_two = dirs
+        .iter()
+        .reduce(|acc, e| {
+            let delta_acc = acc.abs_diff(space_needed);
+            let delta_e = e.abs_diff(space_needed);
+
+            if delta_e < delta_acc && *e <= space_needed {
+                return e;
+            } else {
+                return acc;
+            }
+        })
+        .expect("dir sizes must be calculated");
+
+    (part_one.to_string(), part_two.to_string())
 }
 
 fn parse_line(line: &str) -> Option<Line> {
@@ -163,12 +183,21 @@ impl Size for File {
     }
 }
 
-#[derive(Debug)]
 struct Directory {
     name: String,
     files: Vec<File>,
     directories: Vec<Rc<RefCell<Directory>>>,
     parent: Option<Rc<RefCell<Directory>>>,
+}
+
+impl fmt::Debug for Directory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Directory {{ name: {:?}, files: {:?}, directories: {:?} }}",
+            self.name, self.files, self.directories
+        )
+    }
 }
 
 impl Directory {
@@ -188,6 +217,19 @@ impl Directory {
             directories: Vec::new(),
             parent: None,
         }
+    }
+
+    fn all_dir_sizes(&self) -> Vec<usize> {
+        let below = self
+            .directories
+            .iter()
+            .flat_map(|d| d.borrow().all_dir_sizes());
+        self.directories
+            .iter()
+            .map(|d| d.borrow().get_size())
+            .chain(below)
+            .chain(vec![self.get_size()])
+            .collect()
     }
 }
 
