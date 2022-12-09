@@ -272,6 +272,7 @@ trait HoldsDirectories {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct File {
     name: String,
     size: usize,
