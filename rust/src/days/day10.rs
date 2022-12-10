@@ -353,7 +353,6 @@ fn solve_part_one(instructions: &Vec<Instruction>) -> i32 {
             crt[crt_y][crt_x] = crt_x.abs_diff(x as usize) <= 1;
             // println!("{cycle:3}: {x:3} ({signal_strength:4}) | {instruction:?}");
 
-            // TODO: first 20 then after 40
             if cycle == inspection_interval {
                 signal_strength += cycle * x;
                 inspection_interval += 40;
