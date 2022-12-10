@@ -108,25 +108,40 @@ fn move_tail(&head: &Position, &tail: &Position) -> Position {
         };
     }
 
-    if tail.x.abs_diff(head.x) == 1 {
-        return Position {
+    let diff_x = tail.x.abs_diff(head.x);
+    let diff_y = tail.y.abs_diff(head.y);
+
+    match (diff_x, diff_y) {
+        (2, 2) => Position {
+            x: if head.x == tail.x + 2 {
+                head.x - 1
+            } else {
+                head.x + 1
+            },
+            y: if head.y == tail.y + 2 {
+                head.y - 1
+            } else {
+                head.y + 1
+            },
+        },
+        (1, _) => Position {
             x: head.x,
             y: if head.y == tail.y + 2 {
                 head.y - 1
             } else {
                 head.y + 1
             },
-        };
-    }
-
-    return Position {
-        y: head.y,
-        x: if head.x == tail.x + 2 {
-            head.x - 1
-        } else {
-            head.x + 1
         },
-    };
+        (_, 1) => Position {
+            y: head.y,
+            x: if head.x == tail.x + 2 {
+                head.x - 1
+            } else {
+                head.x + 1
+            },
+        },
+        _ => panic!("unexpected move dx {diff_x} dy {diff_y}"),
+    }
 }
 
 fn are_touching(a: &Position, b: &Position) -> bool {
