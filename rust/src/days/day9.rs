@@ -1,12 +1,13 @@
-use std::{collections::HashSet, fs, iter, ops::Neg, path::PathBuf, str::Lines};
+use std::{collections::HashSet, fs, hash::Hash, iter, path::PathBuf, str::Lines};
 
 pub fn solve(input_path: &PathBuf) -> (String, String) {
     let input = fs::read_to_string(input_path).expect("file must be readable");
     let instructions = parse_instructions(input.lines());
 
-    let part_one = solve_part_one(&instructions);
+    let part_one = run_simulation(&instructions, 1);
+    let part_two = run_simulation(&instructions, 9);
 
-    (part_one.to_string(), String::new())
+    (part_one.to_string(), part_two.to_string())
 }
 
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
@@ -15,61 +16,117 @@ struct Position {
     y: i32,
 }
 
-fn solve_part_one(instructions: &Vec<Instruction>) -> usize {
-    let mut visited_positions: HashSet<Position> = HashSet::new();
+fn run_simulation(instructions: &Vec<Instruction>, tail_length: usize) -> usize {
     let mut head = Position { x: 0, y: 0 };
-    let mut tail = Position { x: 0, y: 0 };
+    let mut tails: Vec<Position> = iter::repeat(Position { x: 0, y: 0 })
+        .take(tail_length)
+        .collect();
 
-    visited_positions.insert(tail);
-    for (i, instruction) in instructions.iter().enumerate() {
+    let mut visited: Vec<HashSet<Position>> = tails.iter().map(|&p| HashSet::from([p])).collect();
 
-        head = match instruction {
-            Instruction::Up => move_up(head),
-            Instruction::Down => move_down(head),
-            Instruction::Left => move_left(head),
-            Instruction::Right => move_right(head),
-        };
+    for instruction in instructions {
+        head = move_head(&head, instruction);
+        tails[0] = move_tail(&head, &tails[0]);
+        visited[0].insert(tails[0]);
 
-        if are_touching(&head, &tail) {
-            continue;
+        for i in 1..tail_length {
+            let previous_tail = tails[i - 1];
+            tails[i] = move_tail(&previous_tail, &tails[i]);
+            visited[i].insert(tails[i]);
         }
-
-        let offset = match instruction {
-            Instruction::Up => 1,
-            Instruction::Down => -1,
-            Instruction::Left => -1,
-            Instruction::Right => 1,
-        };
-
-        if head.x == tail.x {
-            tail = Position {
-                y: tail.y + offset,
-                ..tail
-            };
-            visited_positions.insert(tail);
-            continue;
-        }
-
-        if head.y == tail.y {
-            tail = Position {
-                x: tail.x + offset,
-                ..tail
-            };
-            visited_positions.insert(tail);
-            continue;
-        }
-
-        tail = match instruction {
-            Instruction::Up => Position { x: head.x, y: head.y - 1 },
-            Instruction::Down => Position { x: head.x, y: head.y + 1 },
-            Instruction::Left => Position { x: head.x + 1, y: head.y },
-            Instruction::Right => Position { x: head.x - 1, y: head.y },
-        };
-
-        visited_positions.insert(tail);
     }
 
-    visited_positions.len()
+    /*let all_visited: HashSet<Position> = visited.iter().fold(HashSet::new(), |mut acc, item| {
+        acc.extend(item);
+        acc
+    });*/
+
+    //print_board(visited.last().unwrap());
+
+    // let lens: Vec<usize> = visited.iter().map(|l| l.len()).collect();
+    // println!("{lens:?}");
+
+    visited.last().unwrap().len()
+}
+
+fn print_board(visited: &HashSet<Position>) {
+    let min_x = visited.iter().map(|p| p.x).min().unwrap();
+    let max_x = visited.iter().map(|p| p.x).max().unwrap();
+    let min_y = visited.iter().map(|p| p.y).min().unwrap();
+    let max_y = visited.iter().map(|p| p.y).max().unwrap();
+    let padding = 2;
+    println!("");
+
+    for y in (min_y - padding..=max_y + padding).rev() {
+        for x in min_x - padding..=max_x + padding {
+            if x == 0 && y == 0 {
+                print!("s");
+            } else if visited.contains(&Position { x: x, y: y }) {
+                print!("#");
+            } else {
+                print!(".");
+            }
+        }
+        println!("");
+    }
+    println!("");
+}
+
+fn move_head(&head: &Position, instruction: &Instruction) -> Position {
+    match instruction {
+        Instruction::Up => move_up(&head),
+        Instruction::Down => move_down(&head),
+        Instruction::Left => move_left(&head),
+        Instruction::Right => move_right(&head),
+    }
+}
+
+fn move_tail(&head: &Position, &tail: &Position) -> Position {
+    if are_touching(&head, &tail) {
+        return tail;
+    }
+
+    if head.x == tail.x {
+        return Position {
+            y: if head.y > tail.y {
+                tail.y + 1
+            } else {
+                tail.y - 1
+            },
+            ..tail
+        };
+    }
+
+    if head.y == tail.y {
+        return Position {
+            x: if head.x > tail.x {
+                tail.x + 1
+            } else {
+                tail.x - 1
+            },
+            ..tail
+        };
+    }
+
+    if tail.x.abs_diff(head.x) == 1 {
+        return Position {
+            x: head.x,
+            y: if head.y == tail.y + 2 {
+                head.y - 1
+            } else {
+                head.y + 1
+            },
+        };
+    }
+
+    return Position {
+        y: head.y,
+        x: if head.x == tail.x + 2 {
+            head.x - 1
+        } else {
+            head.x + 1
+        },
+    };
 }
 
 fn are_touching(a: &Position, b: &Position) -> bool {
@@ -81,25 +138,25 @@ fn are_touching(a: &Position, b: &Position) -> bool {
     same || row_touch || col_touch || dia_touch
 }
 
-fn move_up(position: Position) -> Position {
+fn move_up(&position: &Position) -> Position {
     Position {
         y: position.y + 1,
         ..position
     }
 }
-fn move_down(position: Position) -> Position {
+fn move_down(&position: &Position) -> Position {
     Position {
         y: position.y - 1,
         ..position
     }
 }
-fn move_right(position: Position) -> Position {
+fn move_right(&position: &Position) -> Position {
     Position {
         x: position.x + 1,
         ..position
     }
 }
-fn move_left(position: Position) -> Position {
+fn move_left(&position: &Position) -> Position {
     Position {
         x: position.x - 1,
         ..position
