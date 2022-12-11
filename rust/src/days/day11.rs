@@ -10,8 +10,8 @@ pub fn solve(input_path: &PathBuf) -> (String, String) {
 }
 
 fn solve_part_one(input: &str) -> u64 {
-    let mut monkeys = parse_monkeys(&input);
-    run_rounds(20, 3, &mut monkeys);
+    let mut monkeys = parse_monkeys(&input, 3, false);
+    run_rounds(20, &mut monkeys);
 
     let mut counts: Vec<u64> = monkeys.iter().map(|m| m.inspection_count).collect();
     counts.sort();
@@ -20,8 +20,8 @@ fn solve_part_one(input: &str) -> u64 {
 }
 
 fn solve_part_two(input: &str) -> u64 {
-    let mut monkeys = parse_monkeys(&input);
-    run_rounds(10_000, 1, &mut monkeys);
+    let mut monkeys = parse_monkeys(&input, 1, true);
+    run_rounds(10_000, &mut monkeys);
 
     let mut counts: Vec<u64> = monkeys.iter().map(|m| m.inspection_count).collect();
     counts.sort();
@@ -29,14 +29,14 @@ fn solve_part_two(input: &str) -> u64 {
     counts.iter().rev().take(2).product()
 }
 
-fn run_rounds(number: usize, worry_divisor: u64, monkeys: &mut Vec<Monkey>) {
+fn run_rounds(number: usize, monkeys: &mut Vec<Monkey>) {
     for _ in 0..number {
-        run_round(monkeys, worry_divisor);
+        run_round(monkeys);
     }
 
-    fn run_round(monkeys: &mut Vec<Monkey>, worry_divisor: u64) {
+    fn run_round(monkeys: &mut Vec<Monkey>) {
         for i in 0..monkeys.len() {
-            monkeys[i].inspect_items(worry_divisor);
+            monkeys[i].inspect_items();
             while let Some(throw) = monkeys[i].perform_throw() {
                 monkeys[throw.monkey as usize].catch_item(throw.item);
             }
@@ -44,7 +44,7 @@ fn run_rounds(number: usize, worry_divisor: u64, monkeys: &mut Vec<Monkey>) {
     }
 }
 
-fn parse_monkeys(input: &str) -> Vec<Monkey> {
+fn parse_monkeys(input: &str, worry_divisor: u64, use_mod: bool) -> Vec<Monkey> {
     struct Params {
         number: u8,
         operation: Operation,
@@ -113,11 +113,20 @@ fn parse_monkeys(input: &str) -> Vec<Monkey> {
         })
         .collect::<Vec<_>>();
 
-    let mod_base = params.iter().map(|p| p.test.divisor).product();
+    let mod_base = params.iter().map(|p| p.test.divisor).product::<u64>() * worry_divisor;
 
     params
         .iter()
-        .map(|p| Monkey::new(p.number, p.operation, p.test, mod_base, p.items.clone()))
+        .map(|p| {
+            Monkey::new(
+                p.number,
+                p.operation,
+                p.test,
+                if use_mod { Some(mod_base) } else { None },
+                worry_divisor,
+                p.items.clone(),
+            )
+        })
         .collect()
 }
 
@@ -173,7 +182,8 @@ struct Monkey {
     items: VecDeque<u64>,
     throws: VecDeque<Throw>,
     inspection_count: u64,
-    mod_base: u64,
+    mod_base: Option<u64>,
+    worry_divisor: u64,
 }
 
 impl Monkey {
@@ -181,32 +191,35 @@ impl Monkey {
         number: u8,
         operation: Operation,
         test: Test,
-        mod_base: u64,
+        mod_base: Option<u64>,
+        worry_divisor: u64,
         items: VecDeque<u64>,
     ) -> Self {
-       // let mod_items = items.iter().map(|i| i % mod_base).collect();
-
         Monkey {
             number,
             operation,
             test,
-            items: items,
+            items,
             throws: VecDeque::new(),
             inspection_count: 0,
+            worry_divisor,
             mod_base,
         }
     }
 
-    pub fn inspect_items(&mut self, worry_divisor: u64) {
+    pub fn inspect_items(&mut self) {
         while let Some(item) = self.items.pop_front() {
             let mut new_item = match self.operation {
                 Operation::Add(n) => item + n,
                 Operation::Multiply(n) => item * n,
                 Operation::Square => item * item,
-            } % self.mod_base;
+            };
 
-            new_item /= worry_divisor;
-            // new_item %= self.mod_base;
+            if let Some(mod_base) = self.mod_base {
+                new_item %= mod_base;
+            }
+
+            new_item /= self.worry_divisor;
 
             let destination_monkey = self.test.run(new_item);
 
