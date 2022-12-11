@@ -21,7 +21,7 @@ fn solve_part_one(input: &str) -> u64 {
 
 fn solve_part_two(input: &str) -> u64 {
     let mut monkeys = parse_monkeys(&input);
-    run_rounds(1000, 1, &mut monkeys);
+    run_rounds(10_000, 1, &mut monkeys);
 
     let mut counts: Vec<u64> = monkeys.iter().map(|m| m.inspection_count).collect();
     counts.sort();
@@ -29,12 +29,12 @@ fn solve_part_two(input: &str) -> u64 {
     counts.iter().rev().take(2).product()
 }
 
-fn run_rounds(number: usize, worry_divisor: i64, monkeys: &mut Vec<Monkey>) {
+fn run_rounds(number: usize, worry_divisor: u64, monkeys: &mut Vec<Monkey>) {
     for _ in 0..number {
         run_round(monkeys, worry_divisor);
     }
 
-    fn run_round(monkeys: &mut Vec<Monkey>, worry_divisor: i64) {
+    fn run_round(monkeys: &mut Vec<Monkey>, worry_divisor: u64) {
         for i in 0..monkeys.len() {
             monkeys[i].inspect_items(worry_divisor);
             while let Some(throw) = monkeys[i].perform_throw() {
@@ -58,12 +58,12 @@ fn parse_monkeys(input: &str) -> Vec<Monkey> {
                 .parse::<u8>()
                 .unwrap();
 
-            let items: VecDeque<i64> = lines[1]
+            let items: VecDeque<u64> = lines[1]
                 .split(": ")
                 .last()
                 .unwrap()
                 .split(", ")
-                .map(|s| s.parse::<i64>().unwrap())
+                .map(|s| s.parse::<u64>().unwrap())
                 .collect();
 
             let raw_operation: Vec<&str> =
@@ -80,7 +80,7 @@ fn parse_monkeys(input: &str) -> Vec<Monkey> {
                 .split("by ")
                 .last()
                 .unwrap()
-                .parse::<i64>()
+                .parse::<u64>()
                 .unwrap();
 
             let if_true = lines[4]
@@ -109,20 +109,20 @@ fn parse_monkeys(input: &str) -> Vec<Monkey> {
 
 #[derive(Debug)]
 enum Operation {
-    Add(i64),
-    Multiply(i64),
+    Add(u64),
+    Multiply(u64),
     Square,
 }
 
 #[derive(Debug)]
 struct Test {
-    divisible_by: i64,
+    divisible_by: u64,
     if_true: u8,
     if_false: u8,
 }
 
 impl Test {
-    pub fn new(divisible_by: i64, if_true: u8, if_false: u8) -> Self {
+    pub fn new(divisible_by: u64, if_true: u8, if_false: u8) -> Self {
         Test {
             divisible_by,
             if_true,
@@ -130,7 +130,7 @@ impl Test {
         }
     }
 
-    pub fn run(&self, candidate: i64) -> u8 {
+    pub fn run(&self, candidate: u64) -> u8 {
         match candidate % self.divisible_by {
             0 => self.if_true,
             _ => self.if_false,
@@ -141,11 +141,11 @@ impl Test {
 #[derive(Debug)]
 struct Throw {
     monkey: u8,
-    item: i64,
+    item: u64,
 }
 
 impl Throw {
-    pub fn new(monkey: u8, item: i64) -> Self {
+    pub fn new(monkey: u8, item: u64) -> Self {
         Throw { monkey, item }
     }
 }
@@ -156,13 +156,13 @@ struct Monkey {
     number: u8,
     operation: Operation,
     test: Test,
-    items: VecDeque<i64>,
+    items: VecDeque<u64>,
     throws: VecDeque<Throw>,
     inspection_count: u64,
 }
 
 impl Monkey {
-    pub fn new(number: u8, operation: Operation, test: Test, items: VecDeque<i64>) -> Self {
+    pub fn new(number: u8, operation: Operation, test: Test, items: VecDeque<u64>) -> Self {
         Monkey {
             number,
             operation,
@@ -173,7 +173,7 @@ impl Monkey {
         }
     }
 
-    pub fn inspect_items(&mut self, worry_divisor: i64) {
+    pub fn inspect_items(&mut self, worry_divisor: u64) {
         while let Some(item) = self.items.pop_front() {
             let mut new_item = match self.operation {
                 Operation::Add(n) => item + n,
@@ -196,7 +196,7 @@ impl Monkey {
         self.throws.pop_front()
     }
 
-    pub fn catch_item(&mut self, item: i64) {
+    pub fn catch_item(&mut self, item: u64) {
         self.items.push_back(item)
     }
 }
