@@ -45,7 +45,14 @@ fn run_rounds(number: usize, worry_divisor: u64, monkeys: &mut Vec<Monkey>) {
 }
 
 fn parse_monkeys(input: &str) -> Vec<Monkey> {
-    input
+    struct Params {
+        number: u8,
+        operation: Operation,
+        test: Test,
+        items: VecDeque<u64>,
+    }
+
+    let params = input
         .split("\n\n")
         .map(|part| {
             let lines: Vec<&str> = part.lines().collect();
@@ -97,41 +104,48 @@ fn parse_monkeys(input: &str) -> Vec<Monkey> {
                 .parse::<u8>()
                 .unwrap();
 
-            Monkey::new(
+            Params {
                 number,
                 operation,
-                Test::new(divisible_by, if_true, if_false),
+                test: Test::new(divisible_by, if_true, if_false),
                 items,
-            )
+            }
         })
+        .collect::<Vec<_>>();
+
+    let mod_base = params.iter().map(|p| p.test.divisor).product();
+
+    params
+        .iter()
+        .map(|p| Monkey::new(p.number, p.operation, p.test, mod_base, p.items.clone()))
         .collect()
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum Operation {
     Add(u64),
     Multiply(u64),
     Square,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Test {
-    divisible_by: u64,
+    divisor: u64,
     if_true: u8,
     if_false: u8,
 }
 
 impl Test {
-    pub fn new(divisible_by: u64, if_true: u8, if_false: u8) -> Self {
+    pub fn new(divisor: u64, if_true: u8, if_false: u8) -> Self {
         Test {
-            divisible_by,
+            divisor,
             if_true,
             if_false,
         }
     }
 
     pub fn run(&self, candidate: u64) -> u8 {
-        match candidate % self.divisible_by {
+        match candidate % self.divisor {
             0 => self.if_true,
             _ => self.if_false,
         }
@@ -159,17 +173,27 @@ struct Monkey {
     items: VecDeque<u64>,
     throws: VecDeque<Throw>,
     inspection_count: u64,
+    mod_base: u64,
 }
 
 impl Monkey {
-    pub fn new(number: u8, operation: Operation, test: Test, items: VecDeque<u64>) -> Self {
+    pub fn new(
+        number: u8,
+        operation: Operation,
+        test: Test,
+        mod_base: u64,
+        items: VecDeque<u64>,
+    ) -> Self {
+       // let mod_items = items.iter().map(|i| i % mod_base).collect();
+
         Monkey {
             number,
             operation,
             test,
-            items,
+            items: items,
             throws: VecDeque::new(),
             inspection_count: 0,
+            mod_base,
         }
     }
 
@@ -179,9 +203,10 @@ impl Monkey {
                 Operation::Add(n) => item + n,
                 Operation::Multiply(n) => item * n,
                 Operation::Square => item * item,
-            };
+            } % self.mod_base;
 
             new_item /= worry_divisor;
+            // new_item %= self.mod_base;
 
             let destination_monkey = self.test.run(new_item);
 
