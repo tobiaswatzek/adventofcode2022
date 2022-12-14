@@ -4,7 +4,9 @@ use std::{cell::RefCell, fmt::Display, fs, path::PathBuf, rc::Rc, str::Chars};
 pub fn solve(input_path: &PathBuf) -> (String, String) {
     let input = fs::read_to_string(input_path).unwrap();
     let part_one = solve_part_one(&input);
-    return (part_one.to_string(), String::new());
+    let part_two = solve_part_two(&input);
+
+    return (part_one.to_string(), part_two.to_string());
 }
 
 fn solve_part_one(input: &str) -> usize {
@@ -24,8 +26,35 @@ fn solve_part_one(input: &str) -> usize {
         .sum()
 }
 
-fn solve_part_two(input: &str) {
+fn solve_part_two(input: &str) -> usize {
+    let divider_one = parse_packet_data("[[2]]");
+    let divider_two = parse_packet_data("[[6]]");
+    let mut packets = input
+        .lines()
+        .filter_map(|l| {
+            if l.is_empty() {
+                return None;
+            }
 
+            Some(parse_packet_data(l))
+        })
+        .chain([Rc::clone(&divider_one), Rc::clone(&divider_two)])
+        .collect::<Vec<_>>();
+
+    packets.sort_unstable();
+
+    let pos_div_one = packets
+        .iter()
+        .position(|p| Rc::ptr_eq(p, &divider_one))
+        .unwrap()
+        + 1;
+    let pos_div_two = packets
+        .iter()
+        .position(|p| Rc::ptr_eq(p, &divider_two))
+        .unwrap()
+        + 1;
+
+    pos_div_one * pos_div_two
 }
 
 fn parse_pairs(input: &str) -> Vec<(Rc<PacketData>, Rc<PacketData>)> {
@@ -120,7 +149,7 @@ enum Token {
     Number(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum PacketData {
     List(RefCell<Vec<Rc<PacketData>>>),
     Number(u64),
@@ -134,34 +163,7 @@ impl PacketData {
     pub fn new_list(elements: Vec<Rc<PacketData>>) -> Rc<PacketData> {
         Rc::new(PacketData::List(RefCell::new(elements)))
     }
-}
 
-impl Display for PacketData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PacketData::List(l) => {
-                write!(f, "[");
-                for (i, e) in l.borrow().iter().enumerate() {
-                    if i != 0 {
-                        write!(f, ",");
-                    }
-                    e.fmt(f);
-                }
-                write!(f, "]")
-            }
-            PacketData::Number(n) => n.fmt(f),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum Sort {
-    Undecided,
-    Sorted,
-    Unsorted,
-}
-
-impl PacketData {
     fn is_sorted(&self, other: &Self) -> Sort {
         match (self, other) {
             (PacketData::Number(l), PacketData::Number(r)) if l < r => Sort::Sorted,
@@ -200,6 +202,53 @@ impl PacketData {
             }
         }
     }
+}
+
+impl PartialOrd for PacketData {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for PacketData {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.is_sorted(other) {
+            Sort::Undecided => std::cmp::Ordering::Equal,
+            Sort::Sorted => std::cmp::Ordering::Less,
+            Sort::Unsorted => std::cmp::Ordering::Greater,
+        }
+    }
+}
+
+impl Display for PacketData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PacketData::List(l) => {
+                if let Err(e) = write!(f, "[") {
+                    return Err(e);
+                }
+                for (i, e) in l.borrow().iter().enumerate() {
+                    if i != 0 {
+                        if let Err(e) = write!(f, ",") {
+                            return Err(e);
+                        }
+                    }
+                    if let Err(e) = e.fmt(f) {
+                        return Err(e);
+                    }
+                }
+                write!(f, "]")
+            }
+            PacketData::Number(n) => n.fmt(f),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum Sort {
+    Undecided,
+    Sorted,
+    Unsorted,
 }
 
 #[test]
@@ -450,6 +499,7 @@ fn test_input() {
     assert_eq!(actual, 0);
 }
 
+#[allow(dead_code)]
 fn wrap_numbers<I>(nums: I) -> Vec<Rc<PacketData>>
 where
     I: IntoIterator<Item = u64>,
