@@ -16,18 +16,16 @@ fn solve_part_one(input: &str) -> usize {
         .filter_map(|(i, (l, r))| {
             let sorted = l.is_sorted(r);
 
-            println!("{i} {sorted:?}");
-
-            if sorted == Sort::Sorted {
-                println!("\tl:\n\t{l}");
-                println!("\tr:\n\t{r}");
-            }
             match sorted {
                 Sort::Sorted => Some(i + 1),
                 _ => None,
             }
         })
         .sum()
+}
+
+fn solve_part_two(input: &str) {
+
 }
 
 fn parse_pairs(input: &str) -> Vec<(Rc<PacketData>, Rc<PacketData>)> {
@@ -46,42 +44,41 @@ fn parse_pairs(input: &str) -> Vec<(Rc<PacketData>, Rc<PacketData>)> {
 
 fn parse_packet_data(data_str: &str) -> Rc<PacketData> {
     let tokens = parse_tokens(data_str.chars());
-    let data = tokens_to_data(&tokens, None, None);
-    data.expect(format!("could not parse tokens from {data_str}").as_str())
+    let (packet_data, _) = tokens_to_data(&tokens, None);
+    packet_data.expect(format!("could not parse tokens from {data_str}").as_str())
 }
 
 fn tokens_to_data(
     tokens: &[Token],
     packet_data: Option<Rc<PacketData>>,
-    parent: Option<Rc<PacketData>>,
-) -> Option<Rc<PacketData>> {
+) -> (Option<Rc<PacketData>>, &[Token]) {
     let split = tokens.split_first();
     if split.is_none() {
-        return parent.or(packet_data);
+        return (packet_data, &[]);
     }
 
     let t = split.unwrap().0;
     let tail = split.unwrap().1;
     if let Some(inner) = &packet_data {
         match (t, inner.as_ref()) {
-            (Token::Comma, _) => return tokens_to_data(tail, packet_data, parent),
+            (Token::Comma, _) => return tokens_to_data(tail, packet_data),
             (Token::Number(n), PacketData::List(l)) => {
                 let number = PacketData::new_number(n.parse().unwrap());
                 l.borrow_mut().push(number);
-                return tokens_to_data(tail, packet_data, parent);
+                return tokens_to_data(tail, packet_data);
             }
             (Token::ListStart, PacketData::List(parent_to_be)) => {
-                let child = PacketData::new_list(vec![]);
-                parent_to_be.borrow_mut().push(Rc::clone(&child));
-                return tokens_to_data(tail, Some(Rc::clone(&child)), packet_data);
+                let (child, new_tail) = tokens_to_data(tail, Some(PacketData::new_list(vec![])));
+                parent_to_be.borrow_mut().push(child.unwrap());
+                return tokens_to_data(new_tail, packet_data);
             }
             (Token::ListEnd, PacketData::List(_)) => {
-                return tokens_to_data(tail, parent.or(packet_data), None)
+                return (packet_data, tail);
             }
             _ => panic!("unexpected token combination {t:?}"),
         }
-    } else if t == &Token::ListStart && parent.is_none() {
-        return tokens_to_data(tail, Some(PacketData::new_list(vec![])), None);
+    } else if t == &Token::ListStart && packet_data.is_none() {
+        return tokens_to_data(tail, Some(PacketData::new_list(vec![])));
     }
 
     panic!("unexpected token combination {t:?}")
