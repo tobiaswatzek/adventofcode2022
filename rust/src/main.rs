@@ -1,12 +1,16 @@
 use std::{env, error, path::PathBuf};
-mod days;
+
+use adventofcode2022::days;
 
 fn main() {
     let args = parse_args().expect("arguments are expected");
 
     let (part_one, part_two) = days::solve_day(&args.day, &args.file_path());
 
-    println!("Day {}:\n\tPart one: {part_one}\n\tPart two: {part_two}", args.day);
+    println!(
+        "Day {}:\n\tPart one: {part_one}\n\tPart two: {part_two}",
+        args.day
+    );
 }
 
 #[derive(Debug)]

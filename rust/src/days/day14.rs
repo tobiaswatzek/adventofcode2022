@@ -9,7 +9,7 @@ pub fn solve(input_path: &PathBuf) -> (String, String) {
     return (part_one.to_string(), part_two.to_string());
 }
 
-fn solve_part_one(input: &str) -> usize {
+pub fn solve_part_one(input: &str) -> usize {
     let rocks: HashSet<Point> = parse_rocks(&input);
 
     let max_y = rocks.iter().max_by_key(|&p| p.y).unwrap().y;
@@ -36,7 +36,7 @@ fn solve_part_one(input: &str) -> usize {
     return sand.len();
 }
 
-fn solve_part_two(input: &str) -> usize {
+pub fn solve_part_two(input: &str) -> usize {
     let rocks: HashSet<Point> = parse_rocks(&input);
 
     let max_y = rocks.iter().max_by_key(|&p| p.y).unwrap().y;
