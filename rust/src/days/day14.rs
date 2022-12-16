@@ -3,6 +3,13 @@ use std::{collections::HashSet, fs, path::PathBuf};
 pub fn solve(input_path: &PathBuf) -> (String, String) {
     let input = fs::read_to_string(input_path).unwrap();
 
+    let part_one = solve_part_one(&input);
+    let part_two = solve_part_two(&input);
+
+    return (part_one.to_string(), part_two.to_string());
+}
+
+fn solve_part_one(input: &str) -> usize {
     let rocks: HashSet<Point> = parse_rocks(&input);
 
     let max_y = rocks.iter().max_by_key(|&p| p.y).unwrap().y;
@@ -13,7 +20,7 @@ pub fn solve(input_path: &PathBuf) -> (String, String) {
         let mut sand_grain = sand_origin;
 
         while !sand.contains(&sand_grain) && sand_grain.y < max_y {
-            if let Some(next) = next_free_space(&sand_grain, &rocks, &sand) {
+            if let Some(next) = next_free_space(&sand_grain, &rocks, &sand, None) {
                 sand_grain = next;
                 continue;
             }
@@ -26,7 +33,68 @@ pub fn solve(input_path: &PathBuf) -> (String, String) {
         }
     }
 
-    return (sand.len().to_string(), String::new());
+    return sand.len();
+}
+
+fn solve_part_two(input: &str) -> usize {
+    let rocks: HashSet<Point> = parse_rocks(&input);
+
+    let max_y = rocks.iter().max_by_key(|&p| p.y).unwrap().y;
+    let floor = max_y + 2;
+
+    let sand_origin = Point { x: 500, y: 0 };
+    let mut sand: HashSet<Point> = HashSet::new();
+    loop {
+        let mut sand_grain = sand_origin;
+
+        while !sand.contains(&sand_grain) {
+            if let Some(next) = next_free_space(&sand_grain, &rocks, &sand, Some(floor)) {
+                sand_grain = next;
+                continue;
+            }
+
+            sand.insert(sand_grain);
+        }
+
+        if sand.contains(&sand_origin) {
+            break;
+        }
+    }
+
+    return sand.len();
+}
+
+fn next_free_space(
+    current: &Point,
+    rocks: &HashSet<Point>,
+    sand: &HashSet<Point>,
+    floor: Option<usize>,
+) -> Option<Point> {
+    let below = current.below();
+    if !rocks.contains(&below)
+        && !sand.contains(&below)
+        && (floor.is_none() || floor.unwrap() > below.y)
+    {
+        return Some(below);
+    }
+
+    let left_down = current.left_down();
+    if !rocks.contains(&left_down)
+        && !sand.contains(&left_down)
+        && (floor.is_none() || floor.unwrap() > left_down.y)
+    {
+        return Some(left_down);
+    }
+
+    let right_down = current.right_down();
+    if !rocks.contains(&right_down)
+        && !sand.contains(&right_down)
+        && (floor.is_none() || floor.unwrap() > right_down.y)
+    {
+        return Some(right_down);
+    }
+
+    None
 }
 
 fn parse_rocks(input: &str) -> HashSet<Point> {
@@ -75,29 +143,6 @@ fn parse_rocks(input: &str) -> HashSet<Point> {
             formations
         })
         .collect()
-}
-
-fn next_free_space(
-    current: &Point,
-    rocks: &HashSet<Point>,
-    sand: &HashSet<Point>,
-) -> Option<Point> {
-    let below = current.below();
-    if !rocks.contains(&below) && !sand.contains(&below) {
-        return Some(below);
-    }
-
-    let left_down = current.left_down();
-    if !rocks.contains(&left_down) && !sand.contains(&left_down) {
-        return Some(left_down);
-    }
-
-    let right_down = current.right_down();
-    if !rocks.contains(&right_down) && !sand.contains(&right_down) {
-        return Some(right_down);
-    }
-
-    None
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
