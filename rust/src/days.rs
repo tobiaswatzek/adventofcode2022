@@ -11,6 +11,7 @@ mod day8;
 mod day9;
 mod day12;
 mod day13;
+mod day14;
 
 pub fn solve_day(day: &u8, input_path: &PathBuf) -> (String, String) {
     let mut day_registry: HashMap<u8, fn(&PathBuf) -> (String, String)> = HashMap::new();
@@ -25,6 +26,7 @@ pub fn solve_day(day: &u8, input_path: &PathBuf) -> (String, String) {
     day_registry.insert(11, day11::solve);
     day_registry.insert(12, day12::solve);
     day_registry.insert(13, day13::solve);
+    day_registry.insert(14, day14::solve);
 
     let solve = day_registry
         .get(day)
