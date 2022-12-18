@@ -2,21 +2,43 @@ use std::{collections::HashSet, fs, hash::Hash, path::PathBuf};
 
 pub fn solve(input_path: &PathBuf) -> (String, String) {
     let input = fs::read_to_string(input_path).unwrap();
+    let directions = parse_directions(&input);
+    let part_one = solve_part_one(&directions);
+    let part_two = solve_part_two(&directions);
 
-    let part_one = solve_part_one(&input);
-
-    (part_one.to_string(), String::new())
+    (part_one.to_string(), part_two.to_string())
 }
 
-fn solve_part_one(input: &str) -> i64 {
-    let directions = input
+fn parse_directions(input: &str) -> Vec<Direction> {
+    input
         .chars()
         .map_while(|c| match c {
             '<' => Some(Direction::Left),
             '>' => Some(Direction::Right),
             _ => None,
         })
-        .collect::<Vec<_>>();
+        .collect()
+}
+
+fn solve_part_one(directions: &[Direction]) -> u64 {
+    let heights_per_round = run_simulation(directions, 2022);
+
+    *heights_per_round.last().unwrap()
+}
+
+fn solve_part_two(directions: &[Direction]) -> u64 {
+    let num_of_directions = directions.len() as u64;
+    let heights_per_round = run_simulation(directions, num_of_directions as usize);
+    let max = *heights_per_round.last().unwrap();
+    let num_of_rocks: u64 = 2022;
+    let max_multiplicand = num_of_rocks % num_of_directions;
+    let height_without_rest = max * max_multiplicand;
+    //println!("{num_of_directions} {max} {height_without_rest} {}", heights_per_round[22]);
+    //println!("{heights_per_round:#?}");
+    0
+}
+
+fn run_simulation(directions: &[Direction], num_of_rocks: usize) -> Vec<u64> {
     let direction_count = directions.len();
     let width = 7;
 
@@ -25,8 +47,7 @@ fn solve_part_one(input: &str) -> i64 {
 
     let mut count: usize = 0;
 
-    let num_of_rocks: u64 = 2022;
-
+    let mut height_per_round: Vec<u64> = Vec::with_capacity(num_of_rocks);
     let mut rocks: HashSet<Point> = HashSet::new();
     for n in 0..num_of_rocks {
         let shape = shape_for_index(n);
@@ -56,10 +77,10 @@ fn solve_part_one(input: &str) -> i64 {
                 .iter()
                 .all(|p| (p.x >= 0 && p.x < width) && !rocks.contains(p))
             {
-               //  println!("shifted");
+                //  println!("shifted");
                 move_y(-1, &shifted_vertices)
             } else {
-               // println!("unshifted");
+                // println!("unshifted");
                 move_y(-1, &vertices)
             };
 
@@ -77,10 +98,13 @@ fn solve_part_one(input: &str) -> i64 {
         for p in vertices {
             rocks.insert(p);
         }
-        //  print_board(&rocks);
+
+        let height: u64 = (rocks.iter().max_by_key(|&p| p.y).unwrap().y + 1) as u64;
+
+        height_per_round.push(height);
     }
 
-    rocks.iter().max_by_key(|&p| p.y).unwrap().y + 1
+    height_per_round
 }
 
 fn move_y(y: i64, vertices: &Vec<Point>) -> Vec<Point> {
@@ -91,7 +115,7 @@ fn move_x(x: i64, vertices: &Vec<Point>) -> Vec<Point> {
     vertices.iter().map(|p| Point::new(p.x + x, p.y)).collect()
 }
 
-fn shape_for_index(index: u64) -> Shape {
+fn shape_for_index(index: usize) -> Shape {
     match index % 5 {
         0 => Shape::Line,
         1 => Shape::Cross,
